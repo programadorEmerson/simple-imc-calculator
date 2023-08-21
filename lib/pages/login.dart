@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:imccalculator/Widgets/input_text.dart';
 import 'package:imccalculator/Widgets/text_button.dart';
 import 'package:imccalculator/pages/dashboard.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const urlImage =
     "https://saturnino.com.br/_next/image?url=%2Fassets%2Flogo.png&w=2048&q=75";
@@ -18,7 +19,6 @@ class _LoginState extends State<Login> {
   TextEditingController passwordControler = TextEditingController();
   bool showPassword = false;
   bool hasError = false;
-  String errorMessage = "";
 
   bool isValidEmail(String email) {
     final RegExp emailRegex = RegExp(r'^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$');
@@ -31,16 +31,14 @@ class _LoginState extends State<Login> {
     });
   }
 
-  handleLogin(BuildContext context) {
+  handleLogin() async {
     bool hasError = false;
     String errorMessage = "";
 
     if (emailControler.text.isEmpty || !isValidEmail(emailControler.text)) {
       hasError = true;
-      errorMessage = "Email inválido";
     } else if (passwordControler.text.isEmpty) {
       hasError = true;
-      errorMessage = "Informe a senha";
     }
 
     if (hasError) {
@@ -56,7 +54,13 @@ class _LoginState extends State<Login> {
         ),
       );
     }
-    Navigator.pushReplacement(
+
+    // Armazenar o email no SharedPreferences para ser usado no Dashboard
+    final storage = await SharedPreferences.getInstance();
+    storage.setString("email", emailControler.text);
+
+    // ignore: use_build_context_synchronously
+    return Navigator.pushReplacement(
       context,
       MaterialPageRoute(
           builder: (context) => const Dashboard(title: "Imc Calculator")),
@@ -114,8 +118,8 @@ class _LoginState extends State<Login> {
                           width: double.infinity,
                           padding: const EdgeInsets.only(top: 10),
                           child: CustomTextButton(
-                            onPressed: () {
-                              handleLogin(context);
+                            onPressed: () async {
+                              handleLogin();
                             },
                             backgroundColor: Colors.blue,
                             textButton: "Entrar",

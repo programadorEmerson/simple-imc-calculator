@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:imccalculator/Widgets/drawer.dart';
 import 'package:imccalculator/Widgets/input_text.dart';
 import 'package:imccalculator/Widgets/text_button.dart';
+import 'package:imccalculator/models/imc.dart';
+import 'package:imccalculator/repositories/imc.repository.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key, required this.title});
@@ -13,8 +17,24 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   TextEditingController weightController = TextEditingController();
   TextEditingController heightController = TextEditingController();
-  double imc = 0;
   String imcMessage = "";
+  double imc = 0;
+
+  late Box dataBase;
+  List<ImcModel> imcList = [];
+
+  getDataBaseHive() async {
+    List<ImcModel> list = ImcRepository.getAllData();
+    setState(() {
+      imcList = list;
+    });
+  }
+
+  @override
+  void initState() {
+    getDataBaseHive();
+    super.initState();
+  }
 
   void _calculateImc() {
     if (weightController.text.isNotEmpty && heightController.text.isNotEmpty) {
@@ -25,31 +45,30 @@ class _DashboardState extends State<Dashboard> {
         double calculatedImc = weight / ((height / 100) * (height / 100));
         double roundedImc = calculatedImc.ceilToDouble();
 
-        setState(() {
-          imc = roundedImc;
+        if (roundedImc < 16) {
+          imcMessage = "Magreza grave";
+        } else if (roundedImc < 17) {
+          imcMessage = "Magreza moderada";
+        } else if (roundedImc < 18.5) {
+          imcMessage = "Magreza leve";
+        } else if (roundedImc < 25) {
+          imcMessage = "Saudável";
+        } else if (roundedImc < 30) {
+          imcMessage = "Sobrepeso";
+        } else if (roundedImc < 35) {
+          imcMessage = "Obesidade Grau 1";
+        } else if (roundedImc < 40) {
+          imcMessage = "Obesidade Grau 2 (severa)";
+        } else {
+          imcMessage = "Obesidade Grau 3 (mórbida)";
+        }
 
-          if (roundedImc < 16) {
-            imcMessage = "Magreza grave";
-          } else if (roundedImc < 17) {
-            imcMessage = "Magreza moderada";
-          } else if (roundedImc < 18.5) {
-            imcMessage = "Magreza leve";
-          } else if (roundedImc < 25) {
-            imcMessage = "Saudável";
-          } else if (roundedImc < 30) {
-            imcMessage = "Sobrepeso";
-          } else if (roundedImc < 35) {
-            imcMessage = "Obesidade Grau 1";
-          } else if (roundedImc < 40) {
-            imcMessage = "Obesidade Grau 2 (severa)";
-          } else {
-            imcMessage = "Obesidade Grau 3 (mórbida)";
-          }
-        });
-      } else {
-        setState(() {
-          imcMessage = "";
-        });
+        ImcModel imcModel = ImcModel(
+            imcList.length + 1, height, weight, roundedImc, imcMessage);
+
+        ImcRepository.addImc(imcModel);
+
+        getDataBaseHive();
       }
     }
   }
@@ -98,22 +117,22 @@ class _DashboardState extends State<Dashboard> {
                 fontSize: 20,
               ),
               const SizedBox(height: 20),
-              Text(
-                'Seu IMC é: ${imc.toStringAsFixed(2)}',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Column(
+                children: imcList
+                    .map(
+                      (crrImc) => Text(
+                        'Seu IMC é: ${crrImc.imc.toStringAsFixed(2)} | ${crrImc.message}',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                    .toList(),
               ),
-              const SizedBox(height: 20),
-              Text(
-                imcMessage,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
+      drawer: const CustomDrawer(),
     );
   }
 }
